@@ -67,6 +67,29 @@ export function getLocalTZString(): string {
   return `Your timezone: ${tz} (UTC${sign}${h}:${m})`;
 }
 
+/** Peak hours converted to the user's local timezone. */
+export function getLocalPeakHoursString(): string {
+  // Beijing peak hours in UTC minutes since midnight:
+  // 09:00 BJ = 01:00 UTC = 60 min, 12:00 BJ = 04:00 UTC = 240 min
+  // 14:00 BJ = 06:00 UTC = 360 min, 18:00 BJ = 10:00 UTC = 600 min
+  const utcMorningStart = 60;
+  const utcMorningEnd = 240;
+  const utcAfternoonStart = 360;
+  const utcAfternoonEnd = 600;
+
+  const offset = -new Date().getTimezoneOffset(); // minutes
+
+  const toLocal = (utcMin: number): string => {
+    let local = (utcMin + offset) % (24 * 60);
+    if (local < 0) local += 24 * 60;
+    const hh = String(Math.floor(local / 60)).padStart(2, "0");
+    const mm = String(local % 60).padStart(2, "0");
+    return `${hh}:${mm}`;
+  };
+
+  return `Peak in your time: ${toLocal(utcMorningStart)}–${toLocal(utcMorningEnd)} · ${toLocal(utcAfternoonStart)}–${toLocal(utcAfternoonEnd)}`;
+}
+
 /* ── Countdown ─────────────────────────────────────────────────────────── */
 
 export interface CountdownInfo {

@@ -21,9 +21,18 @@ import "../styles/index.css";
         <p class="countdown-label" id="countdown-label">—</p>
         <p class="countdown-time" id="countdown-time">—</p>
       </div>
-      <p class="clock" id="clock">Beijing time: —</p>
-      <p class="clock local" id="local-clock">Local time: —</p>
-      <p class="tz-note" id="tz-note"></p>
+      <button class="toggle-info" id="toggle-info" aria-label="Show time info"
+        >ℹ</button
+      >
+      <div class="time-info hidden" id="time-info">
+        <p class="peak-schedule" id="peak-schedule">
+          Peak hours: 09:00–12:00 · 14:00–18:00 (Beijing time)
+        </p>
+        <p class="peak-schedule local" id="local-peak">—</p>
+        <p class="clock" id="clock">Beijing time: —</p>
+        <p class="clock local" id="local-clock">Local time: —</p>
+        <p class="tz-note" id="tz-note"></p>
+      </div>
     </div>
 
     <script>
@@ -32,6 +41,7 @@ import "../styles/index.css";
         formatCountdown,
         getBeijingTimeString,
         getCountdownInfo,
+        getLocalPeakHoursString,
         getLocalTimeString,
         getLocalTZString,
         isPeakHoursInBeijing,
@@ -51,6 +61,21 @@ import "../styles/index.css";
         "local-clock",
       ) as HTMLElement;
       const tzNoteEl = document.getElementById("tz-note") as HTMLElement;
+      const localPeakEl = document.getElementById("local-peak") as HTMLElement;
+      const toggleBtn = document.getElementById(
+        "toggle-info",
+      ) as HTMLButtonElement;
+      const timeInfo = document.getElementById("time-info") as HTMLElement;
+
+      /* ── Info toggle ──────────────────────────────────────────────────── */
+      toggleBtn.addEventListener("click", () => {
+        const wasHidden = timeInfo.classList.toggle("hidden");
+        toggleBtn.textContent = wasHidden ? "ℹ" : "✕";
+        toggleBtn.setAttribute(
+          "aria-label",
+          wasHidden ? "Show time info" : "Hide time info",
+        );
+      });
 
       /* ── Gradient background ───────────────────────────────────────── */
       const initialPeak = isPeakHoursInBeijing();
@@ -102,6 +127,7 @@ import "../styles/index.css";
 
         clockEl.textContent = `Beijing time: ${getBeijingTimeString()}`;
         localClockEl.textContent = `Local time: ${getLocalTimeString()}`;
+        localPeakEl.textContent = getLocalPeakHoursString();
         updateCountdown();
         gradient.tick();
         requestAnimationFrame(tick);
