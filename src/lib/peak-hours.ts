@@ -47,6 +47,16 @@ export function getBeijingTimeString(): string {
   });
 }
 
+/** Formatted local time string (HH:MM:SS, 24h). */
+export function getLocalTimeString(): string {
+  return new Date().toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+}
+
 /** Human-readable local timezone info. */
 export function getLocalTZString(): string {
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;

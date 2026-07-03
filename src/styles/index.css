@@ -73,11 +73,6 @@ body {
 /* ── Status label ──────────────────────────────────────────────────────── */
 
 .status-label {
-  --stroke-w: 2px;
-  --ts-outline:
-    -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000;
-  --ts-glow: 0 0 12px rgba(0, 0, 0, 0.5);
-
   font-size: clamp(0.9rem, 2.5vw, 1.25rem);
   font-weight: 700;
   letter-spacing: 0.25em;
@@ -88,36 +83,25 @@ body {
 /* ── Main heading ──────────────────────────────────────────────────────── */
 
 .main-heading {
-  --stroke-w: 6px;
-  --ts-outline:
-    -4px -4px 0 var(--color-outline), 4px -4px 0 var(--color-outline),
-    -4px 4px 0 var(--color-outline), 4px 4px 0 var(--color-outline),
-    -4px 0 0 var(--color-outline), 4px 0 0 var(--color-outline),
-    0 -4px 0 var(--color-outline), 0 4px 0 var(--color-outline);
-  --ts-glow: 0 0 32px rgba(255, 255, 255, 0.25);
-
   font-size: clamp(4rem, 16vw, 12rem);
   font-weight: 900;
   line-height: 1;
   letter-spacing: -0.02em;
-  animation: pulse-scale 3s ease-in-out infinite;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: var(--glow-md);
 }
 
 /* ── Subtitle ──────────────────────────────────────────────────────────── */
 
 .subtitle {
-  --stroke-w: 4px;
-  --ts-outline:
-    -3px -3px 0 var(--color-outline), 3px -3px 0 var(--color-outline),
-    -3px 3px 0 var(--color-outline), 3px 3px 0 var(--color-outline);
-  --ts-glow: 0 0 20px rgba(255, 255, 255, 0.3);
-
   font-size: clamp(1.5rem, 5vw, 3.5rem);
   font-weight: 800;
   letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: var(--glow-md);
 }
 
-/* ── Beijing clock ─────────────────────────────────────────────────────── */
+/* ── Beijing & local clock ────────────────────────────────────────────── */
 
 .clock {
   margin-top: 1.5rem;
@@ -126,6 +110,13 @@ body {
   color: rgba(255, 255, 255, 0.9);
   letter-spacing: 0.1em;
   text-shadow: var(--glow-md);
+}
+
+.clock.local {
+  margin-top: 0.25rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: clamp(0.75rem, 1.8vw, 0.95rem);
 }
 
 /* ── Timezone note ─────────────────────────────────────────────────────── */
@@ -140,6 +131,7 @@ body {
 /* ── Animations ────────────────────────────────────────────────────────── */
 
 @keyframes pulse-scale {
+
   0%,
   100% {
     transform: scale(1);

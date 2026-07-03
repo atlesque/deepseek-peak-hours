@@ -16,9 +16,10 @@ import "../styles/index.css";
 
     <div class="content">
       <p class="status-label text-outline" id="status-label">Checking time…</p>
-      <h1 class="main-heading text-outline" id="main-heading">—</h1>
-      <p class="subtitle text-outline" id="subtitle">—</p>
+      <h1 class="main-heading" id="main-heading">—</h1>
+      <p class="subtitle" id="subtitle">—</p>
       <p class="clock" id="clock">Beijing time: —</p>
+      <p class="clock local" id="local-clock">Local time: —</p>
       <p class="tz-note" id="tz-note"></p>
     </div>
 
@@ -26,6 +27,7 @@ import "../styles/index.css";
       import { GradientCanvas } from "../lib/canvas-gradient";
       import {
         getBeijingTimeString,
+        getLocalTimeString,
         getLocalTZString,
         isPeakHoursInBeijing,
       } from "../lib/peak-hours";
@@ -38,6 +40,9 @@ import "../styles/index.css";
       const headingEl = document.getElementById("main-heading")!;
       const subtitleEl = document.getElementById("subtitle")!;
       const clockEl = document.getElementById("clock") as HTMLElement;
+      const localClockEl = document.getElementById(
+        "local-clock",
+      ) as HTMLElement;
       const tzNoteEl = document.getElementById("tz-note") as HTMLElement;
 
       /* ── Gradient background ───────────────────────────────────────── */
@@ -47,12 +52,12 @@ import "../styles/index.css";
       /* ── UI helpers ────────────────────────────────────────────────── */
       const UI = {
         PEAK: {
-          label: "⚠ DeepSeek API",
+          label: "DeepSeek API",
           heading: "Peak hours",
           subtitle: "Keep it cool",
         },
         OFF: {
-          label: "✓ DeepSeek API",
+          label: "DeepSeek API",
           heading: "Off hours",
           subtitle: "Let's code!",
         },
@@ -78,6 +83,7 @@ import "../styles/index.css";
         }
 
         clockEl.textContent = `Beijing time: ${getBeijingTimeString()}`;
+        localClockEl.textContent = `Local time: ${getLocalTimeString()}`;
         gradient.tick();
         requestAnimationFrame(tick);
       }
