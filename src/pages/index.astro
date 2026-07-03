@@ -17,7 +17,6 @@ import "../styles/index.css";
     <div class="content">
       <p class="status-label text-outline" id="status-label">Checking time…</p>
       <h1 class="main-heading" id="main-heading">—</h1>
-      <p class="subtitle" id="subtitle">—</p>
       <div class="countdown" id="countdown">
         <p class="countdown-label" id="countdown-label">—</p>
         <p class="countdown-time" id="countdown-time">—</p>
@@ -44,7 +43,6 @@ import "../styles/index.css";
       ) as HTMLCanvasElement;
       const labelEl = document.getElementById("status-label")!;
       const headingEl = document.getElementById("main-heading")!;
-      const subtitleEl = document.getElementById("subtitle")!;
       const countdownEl = document.getElementById("countdown") as HTMLElement;
       const countdownLabelEl = document.getElementById("countdown-label")!;
       const countdownTimeEl = document.getElementById("countdown-time")!;
@@ -63,12 +61,10 @@ import "../styles/index.css";
         PEAK: {
           label: "DeepSeek API",
           heading: "Peak hours",
-          subtitle: "Keep it cool",
         },
         OFF: {
           label: "DeepSeek API",
           heading: "Off hours",
-          subtitle: "Let's code!",
         },
       } as const;
 
@@ -76,7 +72,6 @@ import "../styles/index.css";
         const state = peak ? UI.PEAK : UI.OFF;
         labelEl.textContent = state.label;
         headingEl.textContent = state.heading;
-        subtitleEl.textContent = state.subtitle;
       }
 
       function updateCountdown(): void {
