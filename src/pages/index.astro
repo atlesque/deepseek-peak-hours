@@ -1,0 +1,322 @@
+---
+// Peak hours for DeepSeek API are 9am-noon and 2pm-6pm Beijing time (UTC+8)
+// This page uses client-side JavaScript to check the user's local time and
+// determine if it's currently peak hours in Beijing.
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DeepSeek Peak Hours</title>
+    <style>
+      *, *::before, *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        position: relative;
+      }
+
+      /* ── Animated mesh gradient canvas ── */
+      #gradient-canvas {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+      }
+
+      /* ── Content overlay ── */
+      .content {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      /* ── Status badge (small label above main text) ── */
+      .status-label {
+        font-size: clamp(0.9rem, 2.5vw, 1.25rem);
+        font-weight: 700;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: #fff;
+        text-shadow:
+          -2px -2px 0 #000,
+           2px -2px 0 #000,
+          -2px  2px 0 #000,
+           2px  2px 0 #000,
+           0    0  12px rgba(0,0,0,0.5);
+        opacity: 0.85;
+      }
+
+      /* ── Main heading ── */
+      .main-heading {
+        font-size: clamp(4rem, 16vw, 12rem);
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: -0.02em;
+        color: #fff;
+        /* white outline via paint-order + stroke workaround with text-shadow */
+        text-shadow:
+          -4px -4px 0 #fff,
+           4px -4px 0 #fff,
+          -4px  4px 0 #fff,
+           4px  4px 0 #fff,
+          -4px  0   0 #fff,
+           4px  0   0 #fff,
+           0   -4px 0 #fff,
+           0    4px 0 #fff,
+           0    0  32px rgba(255,255,255,0.25);
+        /* SVG-style stroke via paint-order trick */
+        -webkit-text-stroke: 6px #fff;
+        paint-order: stroke fill;
+      }
+
+      /* ── Subtitle ── */
+      .subtitle {
+        font-size: clamp(1.5rem, 5vw, 3.5rem);
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        color: #fff;
+        text-shadow:
+          -3px -3px 0 #fff,
+           3px -3px 0 #fff,
+          -3px  3px 0 #fff,
+           3px  3px 0 #fff,
+           0    0  20px rgba(255,255,255,0.3);
+        -webkit-text-stroke: 4px #fff;
+        paint-order: stroke fill;
+      }
+
+      /* ── Beijing clock ── */
+      .clock {
+        margin-top: 1.5rem;
+        font-size: clamp(0.85rem, 2vw, 1.1rem);
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
+        letter-spacing: 0.1em;
+        text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+      }
+
+      /* ── Local timezone note ── */
+      .tz-note {
+        font-size: clamp(0.75rem, 1.5vw, 0.95rem);
+        color: rgba(255, 255, 255, 0.7);
+        letter-spacing: 0.05em;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      }
+
+      /* ── Pulse animation on main heading ── */
+      @keyframes pulse-scale {
+        0%, 100% { transform: scale(1); }
+        50%       { transform: scale(1.04); }
+      }
+
+      .main-heading {
+        animation: pulse-scale 3s ease-in-out infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="gradient-canvas"></canvas>
+
+    <div class="content">
+      <p class="status-label" id="status-label">Checking time…</p>
+      <h1 class="main-heading" id="main-heading">—</h1>
+      <p class="subtitle" id="subtitle">—</p>
+      <p class="clock" id="clock">Beijing time: —</p>
+      <p class="tz-note" id="tz-note"></p>
+    </div>
+
+    <script>
+      // ── Peak-hours logic ──────────────────────────────────────────────────
+      // Peak hours: 09:00–12:00 and 14:00–18:00 Beijing time (UTC+8)
+      function isPeakHoursInBeijing(): boolean {
+        const now = new Date();
+        // Beijing is UTC+8
+        const beijingOffset = 8 * 60; // minutes
+        const localOffset = -now.getTimezoneOffset(); // minutes (JS is negative of UTC offset)
+        const diff = (beijingOffset - localOffset) * 60 * 1000; // ms
+        const beijingTime = new Date(now.getTime() + diff);
+
+        const h = beijingTime.getUTCHours();
+        const m = beijingTime.getUTCMinutes();
+        const totalMinutes = h * 60 + m;
+
+        // 09:00–12:00 → 540–720 min
+        // 14:00–18:00 → 840–1080 min
+        return (totalMinutes >= 540 && totalMinutes < 720) ||
+               (totalMinutes >= 840 && totalMinutes < 1080);
+      }
+
+      function getBeijingTimeString(): string {
+        const now = new Date();
+        return now.toLocaleTimeString('en-US', {
+          timeZone: 'Asia/Shanghai',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        });
+      }
+
+      function getLocalTZString(): string {
+        try {
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          const offset = -new Date().getTimezoneOffset();
+          const sign = offset >= 0 ? '+' : '-';
+          const h = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
+          const m = String(Math.abs(offset) % 60).padStart(2, '0');
+          return `Your timezone: ${tz} (UTC${sign}${h}:${m})`;
+        } catch {
+          return '';
+        }
+      }
+
+      // ── Animated mesh gradient ────────────────────────────────────────────
+      const canvas = document.getElementById('gradient-canvas') as HTMLCanvasElement;
+      const ctx = canvas.getContext('2d')!;
+
+      // Colour palettes
+      const PEAK_COLORS = [
+        '#c0392b', '#e74c3c', '#922b21', '#ff6b6b',
+        '#ff4757', '#b71c1c', '#e53935', '#ff1744',
+      ];
+      const OFF_COLORS = [
+        '#1565c0', '#1e88e5', '#0d47a1', '#42a5f5',
+        '#2979ff', '#0288d1', '#039be5', '#1976d2',
+      ];
+
+      interface Orb {
+        x: number;
+        y: number;
+        vx: number;
+        vy: number;
+        r: number;
+        color: string;
+      }
+
+      let orbs: Orb[] = [];
+      let currentPeak = false;
+
+      function initOrbs(peak: boolean): void {
+        const colors = peak ? PEAK_COLORS : OFF_COLORS;
+        orbs = Array.from({ length: 8 }, (_, i) => ({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: (Math.random() - 0.5) * 1.5,
+          vy: (Math.random() - 0.5) * 1.5,
+          r: Math.min(canvas.width, canvas.height) * (0.35 + Math.random() * 0.3),
+          color: colors[i % colors.length],
+        }));
+      }
+
+      function resize(): void {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+
+      function drawFrame(peak: boolean): void {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // dark base
+        ctx.fillStyle = peak ? '#4a0000' : '#001a3a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        for (const orb of orbs) {
+          const grad = ctx.createRadialGradient(orb.x, orb.y, 0, orb.x, orb.y, orb.r);
+          grad.addColorStop(0, orb.color + 'cc');
+          grad.addColorStop(1, orb.color + '00');
+          ctx.globalCompositeOperation = 'screen';
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(orb.x, orb.y, orb.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
+      function moveOrbs(): void {
+        for (const orb of orbs) {
+          orb.x += orb.vx;
+          orb.y += orb.vy;
+          if (orb.x < -orb.r) orb.x = canvas.width + orb.r;
+          if (orb.x > canvas.width + orb.r) orb.x = -orb.r;
+          if (orb.y < -orb.r) orb.y = canvas.height + orb.r;
+          if (orb.y > canvas.height + orb.r) orb.y = -orb.r;
+        }
+      }
+
+      // ── UI update ─────────────────────────────────────────────────────────
+      function updateUI(peak: boolean): void {
+        const label = document.getElementById('status-label')!;
+        const heading = document.getElementById('main-heading')!;
+        const subtitle = document.getElementById('subtitle')!;
+
+        if (peak) {
+          label.textContent = '⚠ DeepSeek API';
+          heading.textContent = 'Peak hours';
+          subtitle.textContent = 'Keep it cool';
+        } else {
+          label.textContent = '✓ DeepSeek API';
+          heading.textContent = 'Off hours';
+          subtitle.textContent = "Let's code!";
+        }
+      }
+
+      function tick(): void {
+        const peak = isPeakHoursInBeijing();
+
+        if (peak !== currentPeak) {
+          currentPeak = peak;
+          initOrbs(peak);
+          updateUI(peak);
+        }
+
+        // Update clock every frame
+        (document.getElementById('clock') as HTMLElement).textContent =
+          `Beijing time: ${getBeijingTimeString()}`;
+
+        moveOrbs();
+        drawFrame(peak);
+        requestAnimationFrame(tick);
+      }
+
+      // ── Boot ──────────────────────────────────────────────────────────────
+      window.addEventListener('resize', () => {
+        resize();
+        initOrbs(currentPeak);
+      });
+
+      resize();
+      currentPeak = isPeakHoursInBeijing();
+      initOrbs(currentPeak);
+      updateUI(currentPeak);
+
+      const tzNote = document.getElementById('tz-note') as HTMLElement;
+      tzNote.textContent = getLocalTZString();
+
+      tick();
+    </script>
+  </body>
+</html>
