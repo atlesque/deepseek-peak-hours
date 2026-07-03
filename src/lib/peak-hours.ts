@@ -66,3 +66,64 @@ export function getLocalTZString(): string {
   const m = String(Math.abs(offset) % 60).padStart(2, "0");
   return `Your timezone: ${tz} (UTC${sign}${h}:${m})`;
 }
+
+/* ── Countdown ─────────────────────────────────────────────────────────── */
+
+export interface CountdownInfo {
+  /** "peak" if we're heading toward peak hours, "off" if heading toward off hours */
+  nextState: "peak" | "off";
+  /** Total seconds until the next transition */
+  secondsUntil: number;
+}
+
+/**
+ * Calculate how long until the next peak / off transition in Beijing time.
+ * Returns the target state and total seconds remaining.
+ */
+export function getCountdownInfo(): CountdownInfo {
+  const total = beijingMinutesNow();
+
+  if (total < MORNING_START) {
+    // 00:00–09:00 → heading to morning peak
+    return {
+      nextState: "peak",
+      secondsUntil: (MORNING_START - total) * 60 - new Date().getSeconds(),
+    };
+  }
+  if (total < MORNING_END) {
+    // 09:00–12:00 → heading to first off period
+    return {
+      nextState: "off",
+      secondsUntil: (MORNING_END - total) * 60 - new Date().getSeconds(),
+    };
+  }
+  if (total < AFTERNOON_START) {
+    // 12:00–14:00 → heading to afternoon peak
+    return {
+      nextState: "peak",
+      secondsUntil: (AFTERNOON_START - total) * 60 - new Date().getSeconds(),
+    };
+  }
+  if (total < AFTERNOON_END) {
+    // 14:00–18:00 → heading to off hours
+    return {
+      nextState: "off",
+      secondsUntil: (AFTERNOON_END - total) * 60 - new Date().getSeconds(),
+    };
+  }
+  // 18:00–24:00 → heading to next day morning peak
+  return {
+    nextState: "peak",
+    secondsUntil:
+      (24 * 60 - total + MORNING_START) * 60 - new Date().getSeconds(),
+  };
+}
+
+/** Format seconds as HH:MM:SS (always shown). */
+export function formatCountdown(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+}

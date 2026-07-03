@@ -18,6 +18,10 @@ import "../styles/index.css";
       <p class="status-label text-outline" id="status-label">Checking time…</p>
       <h1 class="main-heading" id="main-heading">—</h1>
       <p class="subtitle" id="subtitle">—</p>
+      <div class="countdown" id="countdown">
+        <p class="countdown-label" id="countdown-label">—</p>
+        <p class="countdown-time" id="countdown-time">—</p>
+      </div>
       <p class="clock" id="clock">Beijing time: —</p>
       <p class="clock local" id="local-clock">Local time: —</p>
       <p class="tz-note" id="tz-note"></p>
@@ -26,7 +30,9 @@ import "../styles/index.css";
     <script>
       import { GradientCanvas } from "../lib/canvas-gradient";
       import {
+        formatCountdown,
         getBeijingTimeString,
+        getCountdownInfo,
         getLocalTimeString,
         getLocalTZString,
         isPeakHoursInBeijing,
@@ -39,6 +45,9 @@ import "../styles/index.css";
       const labelEl = document.getElementById("status-label")!;
       const headingEl = document.getElementById("main-heading")!;
       const subtitleEl = document.getElementById("subtitle")!;
+      const countdownEl = document.getElementById("countdown") as HTMLElement;
+      const countdownLabelEl = document.getElementById("countdown-label")!;
+      const countdownTimeEl = document.getElementById("countdown-time")!;
       const clockEl = document.getElementById("clock") as HTMLElement;
       const localClockEl = document.getElementById(
         "local-clock",
@@ -70,6 +79,20 @@ import "../styles/index.css";
         subtitleEl.textContent = state.subtitle;
       }
 
+      function updateCountdown(): void {
+        const info = getCountdownInfo();
+        if (info.nextState === "peak") {
+          countdownLabelEl.textContent = "Time until peak hours";
+          countdownEl.classList.remove("countdown-off");
+          countdownEl.classList.add("countdown-peak");
+        } else {
+          countdownLabelEl.textContent = "Time until off hours";
+          countdownEl.classList.remove("countdown-peak");
+          countdownEl.classList.add("countdown-off");
+        }
+        countdownTimeEl.textContent = formatCountdown(info.secondsUntil);
+      }
+
       /* ── Main loop ─────────────────────────────────────────────────── */
       let currentPeak = initialPeak;
 
@@ -84,6 +107,7 @@ import "../styles/index.css";
 
         clockEl.textContent = `Beijing time: ${getBeijingTimeString()}`;
         localClockEl.textContent = `Local time: ${getLocalTimeString()}`;
+        updateCountdown();
         gradient.tick();
         requestAnimationFrame(tick);
       }
