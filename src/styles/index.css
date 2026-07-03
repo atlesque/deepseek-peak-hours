@@ -1,0 +1,151 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   DeepSeek Peak Hours — Styles
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --color-bg-peak: #4a0000;
+  --color-bg-off: #001a3a;
+  --color-text: #fff;
+  --color-outline: #fff;
+  --glow-sm: 0 1px 4px rgba(0, 0, 0, 0.5);
+  --glow-md: 0 1px 6px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Reset ─────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-sans);
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* ── Fullscreen canvas ─────────────────────────────────────────────────── */
+
+#gradient-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+/* ── Content overlay ───────────────────────────────────────────────────── */
+
+.content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* ── Shared text-outline utility ───────────────────────────────────────── */
+
+.text-outline {
+  color: var(--color-text);
+  text-shadow: var(--ts-outline), var(--ts-glow, none);
+  -webkit-text-stroke: var(--stroke-w, 0) var(--color-outline);
+  paint-order: stroke fill;
+}
+
+/* ── Status label ──────────────────────────────────────────────────────── */
+
+.status-label {
+  --stroke-w: 2px;
+  --ts-outline:
+    -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000;
+  --ts-glow: 0 0 12px rgba(0, 0, 0, 0.5);
+
+  font-size: clamp(0.9rem, 2.5vw, 1.25rem);
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+/* ── Main heading ──────────────────────────────────────────────────────── */
+
+.main-heading {
+  --stroke-w: 6px;
+  --ts-outline:
+    -4px -4px 0 var(--color-outline), 4px -4px 0 var(--color-outline),
+    -4px 4px 0 var(--color-outline), 4px 4px 0 var(--color-outline),
+    -4px 0 0 var(--color-outline), 4px 0 0 var(--color-outline),
+    0 -4px 0 var(--color-outline), 0 4px 0 var(--color-outline);
+  --ts-glow: 0 0 32px rgba(255, 255, 255, 0.25);
+
+  font-size: clamp(4rem, 16vw, 12rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  animation: pulse-scale 3s ease-in-out infinite;
+}
+
+/* ── Subtitle ──────────────────────────────────────────────────────────── */
+
+.subtitle {
+  --stroke-w: 4px;
+  --ts-outline:
+    -3px -3px 0 var(--color-outline), 3px -3px 0 var(--color-outline),
+    -3px 3px 0 var(--color-outline), 3px 3px 0 var(--color-outline);
+  --ts-glow: 0 0 20px rgba(255, 255, 255, 0.3);
+
+  font-size: clamp(1.5rem, 5vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+/* ── Beijing clock ─────────────────────────────────────────────────────── */
+
+.clock {
+  margin-top: 1.5rem;
+  font-size: clamp(0.85rem, 2vw, 1.1rem);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.1em;
+  text-shadow: var(--glow-md);
+}
+
+/* ── Timezone note ─────────────────────────────────────────────────────── */
+
+.tz-note {
+  font-size: clamp(0.75rem, 1.5vw, 0.95rem);
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.05em;
+  text-shadow: var(--glow-sm);
+}
+
+/* ── Animations ────────────────────────────────────────────────────────── */
+
+@keyframes pulse-scale {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.04);
+  }
+}
