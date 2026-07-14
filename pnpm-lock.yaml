@@ -10,6 +10,9 @@ importers:
       astro:
         specifier: ^7.0.6
         version: 7.0.6(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+      fuse.js:
+        specifier: ^7.4.2
+        version: 7.4.2
     devDependencies:
       "@eslint/js":
         specifier: ^10.0.1
@@ -1855,6 +1858,13 @@ packages:
       }
     engines: { node: ^8.16.0 || ^10.6.0 || >=11.0.0 }
     os: [darwin]
+
+  fuse.js@7.4.2:
+    resolution:
+      {
+        integrity: sha512-LVbzjD4WA6UP5B1UnP8wuaXJiLnqMdM/E4fiJXTJ5haJ5b/MBNsK29h2fm6swEoQaVQjvYFWKLE2RanyZIoRVQ==,
+      }
+    engines: { node: ">=10" }
 
   get-tsconfig@5.0.0-beta.4:
     resolution:
@@ -4067,6 +4077,8 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
+
+  fuse.js@7.4.2: {}
 
   get-tsconfig@5.0.0-beta.4:
     dependencies:

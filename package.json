@@ -14,7 +14,8 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
-    "astro": "^7.0.6"
+    "astro": "^7.0.6",
+    "fuse.js": "^7.4.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

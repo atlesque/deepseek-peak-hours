@@ -56,6 +56,7 @@ import "../styles/index.css";
     </div>
 
     <script>
+      import Fuse from "fuse.js";
       import { GradientCanvas } from "../lib/canvas-gradient";
       import {
         formatCountdown,
@@ -113,6 +114,7 @@ import "../styles/index.css";
       }
 
       let tzEntries: TZEntry[] = [];
+      let tzFuse: Fuse<TZEntry>;
 
       function buildTimezoneList(): void {
         const zones = Intl.supportedValuesOf("timeZone");
@@ -124,6 +126,13 @@ import "../styles/index.css";
           }))
           .map((e) => ({ ...e, offsetLabel: formatOffsetLabel(e.offset) }))
           .sort((a, b) => a.offset - b.offset || a.zone.localeCompare(b.zone));
+
+        tzFuse = new Fuse(tzEntries, {
+          keys: ["zone", "offsetLabel"],
+          threshold: 0.4,
+          minMatchCharLength: 2,
+          ignoreLocation: true,
+        });
       }
 
       function formatOffsetLabel(offset: number): string {
@@ -148,13 +157,7 @@ import "../styles/index.css";
         autoRow.addEventListener("click", () => selectTimezone(null));
         tzList.appendChild(autoRow);
 
-        const matching = q
-          ? tzEntries.filter(
-              (e) =>
-                e.zone.toLowerCase().includes(q) ||
-                e.offsetLabel.toLowerCase().includes(q),
-            )
-          : tzEntries;
+        const matching = q ? tzFuse.search(q).map((r) => r.item) : tzEntries;
 
         for (const entry of matching) {
           const row = document.createElement("button");
