@@ -32,21 +32,44 @@ import "../styles/index.css";
         <p class="peak-schedule local" id="local-peak">—</p>
         <p class="clock" id="clock">Beijing time: —</p>
         <p class="clock local" id="local-clock">Local time: —</p>
-        <p class="tz-note" id="tz-note"></p>
+        <p class="tz-note" id="tz-note" title="Click to change timezone"></p>
+      </div>
+
+      <!-- Timezone selector modal -->
+      <div
+        class="tz-backdrop hidden"
+        id="tz-backdrop"
+        role="dialog"
+        aria-label="Select timezone"
+      >
+        <div class="tz-popover" id="tz-popover">
+          <input
+            type="text"
+            class="tz-search"
+            id="tz-search"
+            placeholder="Search timezone…"
+            autocomplete="off"
+          />
+          <div class="tz-list" id="tz-list"></div>
+        </div>
       </div>
     </div>
 
     <script>
       import { GradientCanvas } from "../lib/canvas-gradient";
-      import {
-        formatCountdown,
-        getBeijingTimeString,
-        getCountdownInfo,
-        getLocalPeakHoursString,
-        getLocalTimeString,
-        getLocalTZString,
-        isPeakHoursInBeijing,
-      } from "../lib/peak-hours";
+import {
+formatCountdown,
+getBeijingTimeString,
+getCountdownInfo,
+getLocalPeakHoursString,
+getLocalTimeString,
+getLocalTZString,
+getOffsetForZone,
+getStoredTimezone,
+getUserTimezone,
+isPeakHoursInBeijing,
+setStoredTimezone,
+} from "../lib/peak-hours";
 
       /* ── DOM refs ──────────────────────────────────────────────────── */
       const canvasEl = document.getElementById(
@@ -76,6 +99,123 @@ import "../styles/index.css";
           "aria-label",
           wasHidden ? "Show time info" : "Hide time info",
         );
+      });
+
+      /* ── Timezone selector ─────────────────────────────────────────── */
+      const tzBackdrop = document.getElementById("tz-backdrop") as HTMLElement;
+      const tzSearch = document.getElementById("tz-search") as HTMLInputElement;
+      const tzList = document.getElementById("tz-list") as HTMLElement;
+
+      interface TZEntry {
+        zone: string;
+        offset: number;
+        offsetLabel: string;
+      }
+
+      let tzEntries: TZEntry[] = [];
+
+      function buildTimezoneList(): void {
+        const zones = Intl.supportedValuesOf("timeZone");
+        tzEntries = zones
+          .map((zone) => ({
+            zone,
+            offset: getOffsetForZone(zone),
+            offsetLabel: "",
+          }))
+          .map((e) => ({ ...e, offsetLabel: formatOffsetLabel(e.offset) }))
+          .sort((a, b) => a.offset - b.offset || a.zone.localeCompare(b.zone));
+      }
+
+      function formatOffsetLabel(offset: number): string {
+        const sign = offset >= 0 ? "+" : "−";
+        const ah = String(Math.floor(Math.abs(offset) / 60)).padStart(2, "0");
+        const am = String(Math.abs(offset) % 60).padStart(2, "0");
+        return am === "00" ? `UTC${sign}${ah}:00` : `UTC${sign}${ah}:${am}`;
+      }
+
+      function renderTZList(filter = ""): void {
+        const activeZone = getUserTimezone();
+        const q = filter.toLowerCase().trim();
+
+        tzList.innerHTML = "";
+
+        // "Auto-detect" row always first
+        const autoRow = document.createElement("button");
+        autoRow.className =
+          "tz-option" + (getStoredTimezone() ? "" : " tz-selected");
+        autoRow.type = "button";
+        autoRow.innerHTML = `<span>Auto-detect</span><span class="tz-check">✓</span>`;
+        autoRow.addEventListener("click", () => selectTimezone(null));
+        tzList.appendChild(autoRow);
+
+        const matching = q
+          ? tzEntries.filter(
+              (e) =>
+                e.zone.toLowerCase().includes(q) ||
+                e.offsetLabel.toLowerCase().includes(q),
+            )
+          : tzEntries;
+
+        for (const entry of matching) {
+          const row = document.createElement("button");
+          row.className =
+            "tz-option" + (entry.zone === activeZone ? " tz-selected" : "");
+          row.type = "button";
+          const city = entry.zone.split("/").pop()!.replace(/_/g, " ");
+          row.innerHTML = `<span>${city}</span><span class="tz-offset">${entry.offsetLabel}</span><span class="tz-check">✓</span>`;
+          row.addEventListener("click", () => selectTimezone(entry.zone));
+          tzList.appendChild(row);
+        }
+      }
+
+      function selectTimezone(zone: string | null): void {
+        setStoredTimezone(zone);
+        closeTZModal();
+        refreshTimeDisplay();
+      }
+
+      function refreshTimeDisplay(): void {
+        tzNoteEl.textContent = getLocalTZString();
+        localClockEl.textContent = `Local time: ${getLocalTimeString()}`;
+        localPeakEl.textContent = getLocalPeakHoursString();
+      }
+
+      function openTZModal(): void {
+        tzBackdrop.classList.remove("hidden");
+        tzSearch.value = "";
+        renderTZList();
+        tzSearch.focus();
+      }
+
+      function closeTZModal(): void {
+        tzBackdrop.classList.add("hidden");
+      }
+
+      tzNoteEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (tzBackdrop.classList.contains("hidden")) {
+          openTZModal();
+        } else {
+          closeTZModal();
+        }
+      });
+
+      tzSearch.addEventListener("input", () => {
+        renderTZList(tzSearch.value);
+      });
+
+      // Close when clicking the backdrop (outside the popover)
+      tzBackdrop.addEventListener("click", (e) => {
+        if (e.target === tzBackdrop) {
+          closeTZModal();
+        }
+      });
+
+      // Close on Escape
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && !tzBackdrop.classList.contains("hidden")) {
+          closeTZModal();
+        }
       });
 
       /* ── Gradient background ───────────────────────────────────────── */
@@ -140,6 +280,7 @@ import "../styles/index.css";
         gradient.initOrbs();
       });
 
+      buildTimezoneList();
       updateUI(initialPeak);
       tzNoteEl.textContent = getLocalTZString();
       tick();
