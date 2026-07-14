@@ -47,37 +47,38 @@ export function getUserTimezone(): string {
 /**
  * Compute the UTC offset (minutes) for a given IANA timezone at the
  * current instant.  Positive = ahead of UTC (east).
+ *
+ * Uses the "longOffset" timeZoneName which returns the offset directly
+ * (e.g. "GMT-05:00"), avoiding the date-crossing pitfall of the old
+ * Date.UTC-based approach that produced wrong results when the target
+ * zone's calendar date differed from the UTC date.
  */
 export function getOffsetForZone(zone: string): number {
   const now = new Date();
-  const utcMs = now.getTime();
 
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: zone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
+    timeZoneName: "longOffset",
   }).formatToParts(now);
 
-  const get = (type: string) =>
-    Number(parts.find((p) => p.type === type)?.value ?? "0");
+  const tzPart = parts.find((p) => p.type === "timeZoneName");
+  if (tzPart) {
+    // Expected format: "GMT-05:00", "GMT+08:00", "GMT+05:30", or "GMT"
+    const match = tzPart.value.match(/^GMT([+-])(\d{2}):(\d{2})$/);
+    if (match) {
+      const sign = match[1] === "+" ? 1 : -1;
+      const hours = parseInt(match[2], 10);
+      const minutes = parseInt(match[3], 10);
+      return sign * (hours * 60 + minutes);
+    }
+    // UTC itself may be rendered as just "GMT"
+    if (tzPart.value === "GMT") {
+      return 0;
+    }
+  }
 
-  // Treat the zoned calendar date/time as UTC — the difference from
-  // actual UTC gives the offset.
-  const fakeUtcMs = Date.UTC(
-    get("year"),
-    get("month") - 1,
-    get("day"),
-    get("hour"),
-    get("minute"),
-    get("second"),
-  );
-
-  return Math.round((fakeUtcMs - utcMs) / 60_000);
+  // Fallback (shouldn't normally be reached)
+  return -now.getTimezoneOffset();
 }
 
 /**
@@ -85,10 +86,7 @@ export function getOffsetForZone(zone: string): number {
  * if set, otherwise falls back to the browser's timezone.
  */
 export function getUserOffsetMinutes(): number {
-  const zone = getUserTimezone();
-  return zone === Intl.DateTimeFormat().resolvedOptions().timeZone
-    ? -new Date().getTimezoneOffset()
-    : getOffsetForZone(zone);
+  return getOffsetForZone(getUserTimezone());
 }
 
 /* ── Beijing time helpers ─────────────────────────────────────────────── */
