@@ -1,9 +1,11 @@
 /**
  * DeepSeek API peak-hours time utilities.
  *
- * Peak hours (Beijing time, UTC+8):
+ * Peak hours (Beijing time, UTC+8), Monday to Friday only:
  *   - Morning: 09:00–12:00  (540–720 min)
  *   - Afternoon: 14:00–18:00  (840–1080 min)
+ *
+ * Saturday and Sunday are off-peak all day (since 2026-08-23).
  */
 
 const MORNING_START = 9 * 60; // 540
@@ -107,8 +109,47 @@ function beijingMinutesNow(): number {
   return h * 60 + m;
 }
 
+const WEEKDAY_INDEX: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+};
+
+/**
+ * Return the current day of the week in Beijing.  0 = Sunday … 6 = Saturday.
+ *
+ * The weekday has to come off the Beijing calendar, not the local or the UTC
+ * one.  The Chinese pricing page states it in Beijing time (北京时间周一至周五),
+ * and a UTC weekday disagrees with a Beijing weekday for sixteen hours every
+ * week — Friday and Sunday, 16:00–24:00 UTC.
+ */
+function beijingWeekdayNow(): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Shanghai",
+    weekday: "short",
+  }).formatToParts(new Date());
+
+  const w = parts.find((p) => p.type === "weekday")?.value ?? "";
+  // Unknown value → treat as a weekday, i.e. keep the hour windows in play
+  // rather than silently declaring the whole day off-peak.
+  return WEEKDAY_INDEX[w] ?? 1;
+}
+
+/** Is it currently the weekend in Beijing?  Weekends are off-peak all day. */
+function isBeijingWeekend(): boolean {
+  const day = beijingWeekdayNow();
+  return day === 0 || day === 6;
+}
+
 /** Is it currently peak hours in Beijing? */
 export function isPeakHoursInBeijing(): boolean {
+  if (isBeijingWeekend()) {
+    return false;
+  }
   const total = beijingMinutesNow();
   return (
     (total >= MORNING_START && total < MORNING_END) ||
@@ -172,7 +213,10 @@ export function getLocalPeakHoursString(): string {
     return `${hh}:${mm}`;
   };
 
-  return `Peak in your time: ${toLocal(utcMorningStart)}–${toLocal(utcMorningEnd)} · ${toLocal(utcAfternoonStart)}–${toLocal(utcAfternoonEnd)}`;
+  // The days stay Beijing days on purpose: west of UTC+1, Beijing Monday
+  // 09:00 falls on the user's Sunday evening, so "Mon–Fri" would be wrong
+  // if it were read as local days.
+  return `Peak in your time: ${toLocal(utcMorningStart)}–${toLocal(utcMorningEnd)} · ${toLocal(utcAfternoonStart)}–${toLocal(utcAfternoonEnd)} (Beijing Mon–Fri)`;
 }
 
 /* ── Countdown ─────────────────────────────────────────────────────────── */
@@ -190,6 +234,20 @@ export interface CountdownInfo {
  */
 export function getCountdownInfo(): CountdownInfo {
   const total = beijingMinutesNow();
+  const day = beijingWeekdayNow();
+
+  /** Minutes from now until 09:00 Beijing, `days` days from today. */
+  const untilMorningPeakIn = (days: number): number =>
+    days * 24 * 60 - total + MORNING_START;
+
+  if (day === 6 || day === 0) {
+    // Saturday / Sunday → off-peak all day, next peak is Monday morning.
+    return {
+      nextState: "peak",
+      secondsUntil:
+        untilMorningPeakIn(day === 6 ? 2 : 1) * 60 - new Date().getSeconds(),
+    };
+  }
 
   if (total < MORNING_START) {
     // 00:00–09:00 → heading to morning peak
@@ -219,11 +277,12 @@ export function getCountdownInfo(): CountdownInfo {
       secondsUntil: (AFTERNOON_END - total) * 60 - new Date().getSeconds(),
     };
   }
-  // 18:00–24:00 → heading to next day morning peak
+  // 18:00–24:00 → heading to the next weekday's morning peak.  On a Friday
+  // evening that is three days out, not one.
   return {
     nextState: "peak",
     secondsUntil:
-      (24 * 60 - total + MORNING_START) * 60 - new Date().getSeconds(),
+      untilMorningPeakIn(day === 5 ? 3 : 1) * 60 - new Date().getSeconds(),
   };
 }
 
