@@ -1,5 +1,6 @@
 ---
-// Peak hours for DeepSeek API: 09:00–12:00 and 14:00–18:00 Beijing time (UTC+8).
+// Peak hours for DeepSeek API: 09:00–12:00 and 14:00–18:00 Beijing time
+// (UTC+8), Monday to Friday.  Weekends are off-peak all day.
 // Client-side JS checks the user's local time against Beijing time.
 import "../styles/index.css";
 ---
@@ -27,7 +28,7 @@ import "../styles/index.css";
       >
       <div class="time-info hidden" id="time-info">
         <p class="peak-schedule" id="peak-schedule">
-          Peak hours: 09:00–12:00 · 14:00–18:00 (Beijing time)
+          Peak hours: 09:00–12:00 · 14:00–18:00 (Beijing time, Mon–Fri)
         </p>
         <p class="peak-schedule local" id="local-peak">—</p>
         <p class="clock" id="clock">Beijing time: —</p>
