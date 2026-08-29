@@ -1,15 +1,26 @@
 /**
- * DeepSeek API peak-hours time utilities.
+ * DeepSeek API pricing-window time utilities.
  *
- * Peak hours (Beijing time, UTC+8):
- *   - Morning: 09:00–12:00  (540–720 min)
- *   - Afternoon: 14:00–18:00  (840–1080 min)
+ * Peak rates apply Monday through Friday during 01:00–04:00 and
+ * 06:00–10:00 UTC. All other times are off-peak, at half the peak rate.
  */
 
-const MORNING_START = 9 * 60; // 540
-const MORNING_END = 12 * 60; // 720
-const AFTERNOON_START = 14 * 60; // 840
-const AFTERNOON_END = 18 * 60; // 1080
+const MINUTES_PER_DAY = 24 * 60;
+const DAYS_PER_WEEK = 7;
+const FIRST_PEAK_START = 1 * 60;
+const FIRST_PEAK_END = 4 * 60;
+const SECOND_PEAK_START = 6 * 60;
+const SECOND_PEAK_END = 10 * 60;
+const WEEKDAY_START = 1; // Monday in Date#getUTCDay()
+const WEEKDAY_END = 5; // Friday in Date#getUTCDay()
+
+const PEAK_WINDOWS = [
+  { start: FIRST_PEAK_START, end: FIRST_PEAK_END },
+  { start: SECOND_PEAK_START, end: SECOND_PEAK_END },
+] as const;
+
+/** Off-peak rates are 50% of peak rates. */
+export const OFF_PEAK_RATE_MULTIPLIER = 0.5;
 
 /* ── Timezone override (localStorage) ─────────────────────────────────── */
 
@@ -46,12 +57,7 @@ export function getUserTimezone(): string {
 
 /**
  * Compute the UTC offset (minutes) for a given IANA timezone at the
- * current instant.  Positive = ahead of UTC (east).
- *
- * Uses the "longOffset" timeZoneName which returns the offset directly
- * (e.g. "GMT-05:00"), avoiding the date-crossing pitfall of the old
- * Date.UTC-based approach that produced wrong results when the target
- * zone's calendar date differed from the UTC date.
+ * current instant. Positive = ahead of UTC (east).
  */
 export function getOffsetForZone(zone: string): number {
   const now = new Date();
@@ -71,7 +77,6 @@ export function getOffsetForZone(zone: string): number {
       const minutes = parseInt(match[3], 10);
       return sign * (hours * 60 + minutes);
     }
-    // UTC itself may be rendered as just "GMT"
     if (tzPart.value === "GMT") {
       return 0;
     }
@@ -81,47 +86,58 @@ export function getOffsetForZone(zone: string): number {
   return -now.getTimezoneOffset();
 }
 
-/**
- * The user's effective UTC offset in minutes.  Uses the manual override
- * if set, otherwise falls back to the browser's timezone.
- */
+/** The user's effective UTC offset in minutes. */
 export function getUserOffsetMinutes(): number {
   return getOffsetForZone(getUserTimezone());
 }
 
-/* ── Beijing time helpers ─────────────────────────────────────────────── */
+/* ── UTC schedule helpers ─────────────────────────────────────────────── */
 
-/** Return the current time in Beijing as total minutes since midnight. */
-function beijingMinutesNow(): number {
-  const now = new Date();
-  // Use Intl for reliable Beijing time extraction
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Shanghai",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(now);
-
-  const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
-  const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
-  return h * 60 + m;
+interface UtcDateParts {
+  day: number;
+  minutes: number;
 }
 
-/** Is it currently peak hours in Beijing? */
-export function isPeakHoursInBeijing(): boolean {
-  const total = beijingMinutesNow();
+function getUtcDateParts(date: Date): UtcDateParts {
+  return {
+    day: date.getUTCDay(),
+    minutes: date.getUTCHours() * 60 + date.getUTCMinutes(),
+  };
+}
+
+function isWeekday(day: number): boolean {
+  return day >= WEEKDAY_START && day <= WEEKDAY_END;
+}
+
+function isPeakAt(date: Date): boolean {
+  const { day, minutes } = getUtcDateParts(date);
   return (
-    (total >= MORNING_START && total < MORNING_END) ||
-    (total >= AFTERNOON_START && total < AFTERNOON_END)
+    isWeekday(day) &&
+    PEAK_WINDOWS.some(({ start, end }) => minutes >= start && minutes < end)
   );
+}
+
+/** Is the given instant within a peak-rate window in UTC? */
+export function isPeakHoursInUtc(date = new Date()): boolean {
+  return isPeakAt(date);
+}
+
+/** Is it currently within a peak-rate window in UTC? */
+export function isPeakHours(): boolean {
+  return isPeakAt(new Date());
+}
+
+/** Return the rate multiplier for the given instant: 1 for peak, 0.5 off-peak. */
+export function getRateMultiplier(date = new Date()): number {
+  return isPeakAt(date) ? 1 : OFF_PEAK_RATE_MULTIPLIER;
 }
 
 /* ── Formatted time strings ───────────────────────────────────────────── */
 
-/** Formatted Beijing time string (HH:MM:SS, 24h). */
-export function getBeijingTimeString(): string {
+/** Formatted UTC time string (HH:MM:SS, 24h). */
+export function getUtcTimeString(): string {
   return new Date().toLocaleTimeString("en-US", {
-    timeZone: "Asia/Shanghai",
+    timeZone: "UTC",
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -152,27 +168,28 @@ export function getLocalTZString(): string {
   return `Your timezone: UTC${sign}${h}:${m} (${zone})`;
 }
 
-/** Peak hours converted to the user's effective timezone. */
+function formatMinutes(minutes: number): string {
+  if (minutes === MINUTES_PER_DAY) return "24:00";
+  const normalized =
+    ((minutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  const hh = String(Math.floor(normalized / 60)).padStart(2, "0");
+  const mm = String(normalized % 60).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+/** Peak windows converted to the user's effective timezone. */
 export function getLocalPeakHoursString(): string {
-  // Beijing peak hours in UTC minutes since midnight:
-  // 09:00 BJ = 01:00 UTC = 60 min, 12:00 BJ = 04:00 UTC = 240 min
-  // 14:00 BJ = 06:00 UTC = 360 min, 18:00 BJ = 10:00 UTC = 600 min
-  const utcMorningStart = 60;
-  const utcMorningEnd = 240;
-  const utcAfternoonStart = 360;
-  const utcAfternoonEnd = 600;
-
   const offset = getUserOffsetMinutes();
+  const sign = offset >= 0 ? "+" : "-";
+  const hours = Math.floor(Math.abs(offset) / 60);
+  const minutes = Math.abs(offset) % 60;
+  const offsetLabel =
+    minutes === 0
+      ? `UTC${sign}${hours}`
+      : `UTC${sign}${hours}:${String(minutes).padStart(2, "0")}`;
+  const toLocal = (minutes: number): string => formatMinutes(minutes + offset);
 
-  const toLocal = (utcMin: number): string => {
-    let local = (utcMin + offset) % (24 * 60);
-    if (local < 0) local += 24 * 60;
-    const hh = String(Math.floor(local / 60)).padStart(2, "0");
-    const mm = String(local % 60).padStart(2, "0");
-    return `${hh}:${mm}`;
-  };
-
-  return `Peak in your time: ${toLocal(utcMorningStart)}–${toLocal(utcMorningEnd)} · ${toLocal(utcAfternoonStart)}–${toLocal(utcAfternoonEnd)}`;
+  return `Peak in your time: ${toLocal(FIRST_PEAK_START)}-${toLocal(FIRST_PEAK_END)} • ${toLocal(SECOND_PEAK_START)}-${toLocal(SECOND_PEAK_END)} ${offsetLabel}`;
 }
 
 /* ── Countdown ─────────────────────────────────────────────────────────── */
@@ -184,46 +201,49 @@ export interface CountdownInfo {
   secondsUntil: number;
 }
 
-/**
- * Calculate how long until the next peak / off transition in Beijing time.
- * Returns the target state and total seconds remaining.
- */
-export function getCountdownInfo(): CountdownInfo {
-  const total = beijingMinutesNow();
+function getUtcDayStart(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+}
 
-  if (total < MORNING_START) {
-    // 00:00–09:00 → heading to morning peak
-    return {
-      nextState: "peak",
-      secondsUntil: (MORNING_START - total) * 60 - new Date().getSeconds(),
-    };
+function getTransitionTime(now: Date): Date {
+  const { minutes } = getUtcDateParts(now);
+
+  for (const { start, end } of PEAK_WINDOWS) {
+    if (minutes >= start && minutes < end) {
+      const dayStart = getUtcDayStart(now);
+      return new Date(dayStart.getTime() + end * 60 * 1000);
+    }
   }
-  if (total < MORNING_END) {
-    // 09:00–12:00 → heading to first off period
-    return {
-      nextState: "off",
-      secondsUntil: (MORNING_END - total) * 60 - new Date().getSeconds(),
-    };
+
+  const dayStart = getUtcDayStart(now);
+  for (let dayOffset = 0; dayOffset <= DAYS_PER_WEEK; dayOffset += 1) {
+    const candidateDay = new Date(dayStart);
+    candidateDay.setUTCDate(candidateDay.getUTCDate() + dayOffset);
+
+    if (!isWeekday(candidateDay.getUTCDay())) continue;
+
+    for (const { start } of PEAK_WINDOWS) {
+      const candidate = new Date(candidateDay.getTime() + start * 60 * 1000);
+      if (candidate.getTime() > now.getTime()) return candidate;
+    }
   }
-  if (total < AFTERNOON_START) {
-    // 12:00–14:00 → heading to afternoon peak
-    return {
-      nextState: "peak",
-      secondsUntil: (AFTERNOON_START - total) * 60 - new Date().getSeconds(),
-    };
-  }
-  if (total < AFTERNOON_END) {
-    // 14:00–18:00 → heading to off hours
-    return {
-      nextState: "off",
-      secondsUntil: (AFTERNOON_END - total) * 60 - new Date().getSeconds(),
-    };
-  }
-  // 18:00–24:00 → heading to next day morning peak
+
+  throw new Error("Unable to find the next peak-rate window");
+}
+
+/** Calculate the time until the next peak/off-peak transition in UTC. */
+export function getCountdownInfo(now = new Date()): CountdownInfo {
+  const peak = isPeakAt(now);
+  const transition = getTransitionTime(now);
+
   return {
-    nextState: "peak",
-    secondsUntil:
-      (24 * 60 - total + MORNING_START) * 60 - new Date().getSeconds(),
+    nextState: peak ? "off" : "peak",
+    secondsUntil: Math.max(
+      0,
+      Math.ceil((transition.getTime() - now.getTime()) / 1000),
+    ),
   };
 }
 

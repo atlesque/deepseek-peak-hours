@@ -1,6 +1,6 @@
 ---
-// Peak hours for DeepSeek API: 09:00–12:00 and 14:00–18:00 Beijing time (UTC+8).
-// Client-side JS checks the user's local time against Beijing time.
+// Peak rates apply Monday–Friday, 01:00–04:00 and 06:00–10:00 UTC.
+// Off-peak rates are half the peak rates.
 import "../styles/index.css";
 ---
 
@@ -27,10 +27,11 @@ import "../styles/index.css";
       >
       <div class="time-info hidden" id="time-info">
         <p class="peak-schedule" id="peak-schedule">
-          Peak hours: 09:00–12:00 · 14:00–18:00 (Beijing time)
+          Peak hours: 01:00–04:00 · 06:00–10:00 UTC (Monday–Friday)
         </p>
+        <p class="rate-policy">Off-peak rates: 50% of peak rates</p>
         <p class="peak-schedule local" id="local-peak">—</p>
-        <p class="clock" id="clock">Beijing time: —</p>
+        <p class="clock" id="clock">UTC time: —</p>
         <p class="clock local" id="local-clock">Local time: —</p>
         <p class="tz-note" id="tz-note" title="Click to change timezone"></p>
       </div>
@@ -60,7 +61,7 @@ import "../styles/index.css";
       import { GradientCanvas } from "../lib/canvas-gradient";
       import {
         formatCountdown,
-        getBeijingTimeString,
+        getUtcTimeString,
         getCountdownInfo,
         getLocalPeakHoursString,
         getLocalTimeString,
@@ -68,7 +69,7 @@ import "../styles/index.css";
         getOffsetForZone,
         getStoredTimezone,
         getUserTimezone,
-        isPeakHoursInBeijing,
+        isPeakHours,
         setStoredTimezone,
       } from "../lib/peak-hours";
 
@@ -222,7 +223,7 @@ import "../styles/index.css";
       });
 
       /* ── Gradient background ───────────────────────────────────────── */
-      const initialPeak = isPeakHoursInBeijing();
+      const initialPeak = isPeakHours();
       const gradient = new GradientCanvas(canvasEl, initialPeak);
 
       /* ── UI helpers ────────────────────────────────────────────────── */
@@ -261,7 +262,7 @@ import "../styles/index.css";
       let currentPeak = initialPeak;
 
       function tick(): void {
-        const peak = isPeakHoursInBeijing();
+        const peak = isPeakHours();
 
         if (peak !== currentPeak) {
           currentPeak = peak;
@@ -269,7 +270,7 @@ import "../styles/index.css";
           updateUI(peak);
         }
 
-        clockEl.textContent = `Beijing time: ${getBeijingTimeString()}`;
+        clockEl.textContent = `UTC time: ${getUtcTimeString()}`;
         localClockEl.textContent = `Local time: ${getLocalTimeString()}`;
         localPeakEl.textContent = getLocalPeakHoursString();
         updateCountdown();

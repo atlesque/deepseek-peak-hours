@@ -118,6 +118,13 @@ body {
   margin-bottom: 0.125rem;
 }
 
+.rate-policy {
+  font-size: clamp(0.7rem, 1.4vw, 0.9rem);
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.06em;
+  text-shadow: var(--glow-sm);
+}
+
 /* ── Countdown ─────────────────────────────────────────────────────────── */
 
 .countdown {
@@ -199,7 +206,7 @@ body {
   pointer-events: none;
 }
 
-/* ── Beijing & local clock ────────────────────────────────────────────── */
+/* ── UTC & local clock ─────────────────────────────────────────────────── */
 
 .clock {
   margin-top: 1.5rem;

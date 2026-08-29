@@ -2,16 +2,16 @@
 
 > Tells you when it's peak hours for using the DeepSeek API — at a glance.
 
-A single-page web app that checks whether it's currently peak usage hours for the DeepSeek API (Beijing time) and displays the result with a live countdown timer and an animated gradient background.
+A single-page web app that checks whether it's currently peak usage hours for the DeepSeek API (UTC, Monday through Friday) and displays the result with a live countdown timer and an animated gradient background.
 
-Peak hours are **09:00–12:00** and **14:00–18:00** Beijing time (UTC+8). During these windows the DeepSeek API may experience higher latency or rate limiting, so it's helpful to know before you send that big request.
+Peak-rate hours are **01:00–04:00** and **06:00–10:00 UTC, Monday through Friday**. All other hours are off-peak, and off-peak rates are **half of peak rates**.
 
 ## ✨ Features
 
 - **Live peak / off-peak indicator** — instantly see if it's peak time
 - **Countdown timer** — shows how long until the next window starts or ends
 - **Animated gradient canvas** — red-themed orbs during peak, blue during off-peak
-- **Timezone-aware** — displays Beijing time, your local time, and peak hours converted to your timezone
+- **Timezone-aware** — displays UTC time, your local time, and peak windows converted to your timezone
 - **Info panel** — toggle for detailed time breakdowns
 - **Zero dependencies** beyond Astro — pure TypeScript + Canvas API
 
@@ -77,7 +77,7 @@ deepseek-peak-hours/
 │   ├── env.d.ts             # TypeScript environment declarations
 │   ├── lib/
 │   │   ├── canvas-gradient.ts  # Animated mesh gradient (Canvas 2D)
-│   │   └── peak-hours.ts       # Beijing time logic & peak detection
+│   │   └── peak-hours.ts       # UTC pricing-window logic & peak detection
 │   ├── pages/
 │   │   └── index.astro         # Main page (Astro component + inline JS)
 │   └── styles/
@@ -91,13 +91,13 @@ deepseek-peak-hours/
 
 ## ⚙️ How It Works
 
-1. **Beijing time computation** — `peak-hours.ts` uses `Intl.DateTimeFormat` with the `Asia/Shanghai` timezone to reliably determine the current Beijing time, avoiding any server-side timezone pitfalls.
+1. **UTC time computation** — `peak-hours.ts` uses UTC date components to determine the current weekday and time, avoiding any server-side timezone pitfalls.
 
-2. **Peak detection** — Compares the current Beijing time (in minutes since midnight) against the two peak windows:
-   - Morning: 09:00–12:00 (540–720 minutes)
-   - Afternoon: 14:00–18:00 (840–1080 minutes)
+2. **Peak detection** — Compares the current UTC weekday and time against the two weekday peak windows. All other times use the off-peak rate multiplier of 0.5:
+   - 01:00–04:00 UTC
+   - 06:00–10:00 UTC
 
-3. **Client-side rendering** — All logic runs in the browser. The status, countdown, and clocks update every second via `setInterval`.
+3. **Client-side rendering** — All logic runs in the browser. The status, countdown, and clocks update continuously via `requestAnimationFrame`.
 
 4. **Visual feedback** — An animated canvas with floating "orbs" renders a red palette during peak hours and a blue palette during off-peak hours, providing an immediate visual cue.
 
